@@ -1,7 +1,8 @@
 import os
 import sqlite3
-import streamlit as st
+
 import pandas as pd
+import streamlit as st
 
 # Crear una carpeta para guardar las fotos subidas
 UPLOAD_FOLDER = 'uploads'
@@ -16,7 +17,10 @@ def load_user_data():
     if os.path.exists(USER_DATA_FILE):
         return pd.read_csv(USER_DATA_FILE)
     else:
-        return pd.DataFrame(columns=['username', 'password', 'user_type'])
+        # Crear un DataFrame vacío con las columnas necesarias
+        user_data = pd.DataFrame(columns=['username', 'password', 'user_type'])
+        user_data.to_csv(USER_DATA_FILE, index=False)  # Guardar el DataFrame vacío en el archivo
+        return user_data
 
 # Función para guardar datos de usuarios
 def save_user_data(user_data):
@@ -34,43 +38,47 @@ user_type = st.selectbox("Tipo de usuario", ["Estudiante", "Propietario"])
 register_button = st.button("Registrarse")
 
 if register_button:
-    if username and password and user_type:
-        if username in user_data['username'].values:
-            st.warning("El nombre de usuario ya está registrado.")
-        else:
-            new_user = pd.DataFrame({'username': [username], 'password': [password], 'user_type': [user_type]})
-            user_data = pd.concat([user_data, new_user], ignore_index=True)
-            save_user_data(user_data)
-            st.success("Usuario registrado exitosamente.")
-    else:
-        st.warning("Por favor, complete todos los campos.")
-
-
-        # Función para verificar el tipo de usuario
-        def get_user_type(username):
-            user = user_data[user_data['username'] == username]
-            if not user.empty:
-                return user.iloc[0]['user_type']
-            return None
-
-
-        # Formulario de inicio de sesión
-        st.title("Inicio de Sesión")
-        login_username = st.text_input("Nombre de usuario", key="login_username")
-        login_password = st.text_input("Contraseña", type="password", key="login_password")
-        login_button = st.button("Iniciar Sesión")
-
-        if login_button:
-            user_type = get_user_type(login_username)
-            if user_type:
-                if user_type == "Estudiante":
-                    st.success("Bienvenido, Estudiante. Acceso gratuito.")
-                    # Funcionalidades gratuitas para estudiantes
-                elif user_type == "Propietario":
-                    st.warning("Bienvenido, Propietario. Acceso pago.")
-                    # Funcionalidades pagas para propietarios
+    try:
+        if username and password and user_type:
+            if username in user_data['username'].values:
+                st.warning("El nombre de usuario ya está registrado.")
             else:
-                st.error("Usuario o contraseña incorrectos.")
+                new_user = pd.DataFrame({'username': [username], 'password': [password], 'user_type': [user_type]})
+                user_data = pd.concat([user_data, new_user], ignore_index=True)
+                save_user_data(user_data)
+                st.success("Usuario registrado exitosamente.")
+        else:
+            st.warning("Por favor, complete todos los campos.")
+    except Exception as e:
+        st.error(f"Error al registrar usuario: {e}")
+
+# Función para verificar el tipo de usuario
+def get_user_type(username):
+    user = user_data[user_data['username'] == username]
+    if not user.empty:
+        return user.iloc[0]['user_type']
+    return None
+
+# Formulario de inicio de sesión
+st.title("Inicio de Sesión")
+login_username = st.text_input("Nombre de usuario", key="login_username")
+login_password = st.text_input("Contraseña", type="password", key="login_password")
+login_button = st.button("Iniciar Sesión")
+
+if login_button:
+    try:
+        user_type = get_user_type(login_username)
+        if user_type:
+            if user_type == "Estudiante":
+                st.success("Bienvenido, Estudiante. Acceso gratuito.")
+                # Funcionalidades gratuitas para estudiantes
+            elif user_type == "Propietario":
+                st.warning("Bienvenido, Propietario. Acceso pago.")
+                # Funcionalidades pagas para propietarios
+        else:
+            st.error("Usuario o contraseña incorrectos.")
+    except Exception as e:
+        st.error(f"Error al iniciar sesión: {e}")
 
 # Formulario para subir fotos y distancia
 uploaded_files = st.file_uploader("Sube tus fotos aquí", accept_multiple_files=True, type=["jpg", "jpeg", "png"], key="file_uploader_1")
@@ -163,6 +171,7 @@ for msg in messages:
 
 # Cerrar la conexión a la base de datos al final
 conn.close()
+
 # Cargar datos de usuarios desde el archivo CSV
 USER_DATA_FILE = 'user_data.csv'
 user_data = pd.read_csv(USER_DATA_FILE)
@@ -244,3 +253,4 @@ st.header("Mensajes del Chat Grupal")
 group_messages = get_group_chat_messages()
 for msg in group_messages:
     st.write(f"{msg[2]} - **{msg[0]}**: {msg[1]}")
+

@@ -163,3 +163,84 @@ for msg in messages:
 
 # Cerrar la conexión a la base de datos al final
 conn.close()
+# Cargar datos de usuarios desde el archivo CSV
+USER_DATA_FILE = 'user_data.csv'
+user_data = pd.read_csv(USER_DATA_FILE)
+
+# Mostrar los primeros 5 registros
+print(user_data.head())
+# Conectar a la base de datos SQLite
+conn = sqlite3.connect('database/chat.db')
+c = conn.cursor()
+
+# Cargar los mensajes en un DataFrame de pandas
+messages = pd.read_sql_query('SELECT * FROM messages', conn)
+
+# Mostrar los primeros 5 registros
+print(messages.head())
+
+# Cerrar la conexión a la base de datos
+conn.close()
+# Contar el número de usuarios registrados
+num_users = user_data['username'].nunique()
+print(f'Número de usuarios registrados: {num_users}')
+
+# Contar el número de estudiantes y propietarios
+user_types_count = user_data['user_type'].value_counts()
+print(user_types_count)
+
+# Contar el número de mensajes enviados
+num_messages = messages.shape[0]
+print(f'Número de mensajes enviados: {num_messages}')
+
+# Contar el número de mensajes por usuario
+messages_per_user = messages['user'].value_counts()
+print(messages_per_user)
+# Conectar a la base de datos
+conn = sqlite3.connect(os.path.join(DB_FOLDER, 'chat.db'))
+c = conn.cursor()
+
+# Crear la tabla de mensajes del chat grupal si no existe
+c.execute('''
+    CREATE TABLE IF NOT EXISTS group_chat_messages (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        user TEXT,
+        message TEXT,
+        timestamp DATETIME DEFAULT CURRENT_TIMESTAMP
+    )
+''')
+conn.commit()
+conn.close()
+# Función para agregar un mensaje al chat grupal
+def add_group_chat_message(user, message):
+    conn = sqlite3.connect(os.path.join(DB_FOLDER, 'chat.db'))
+    c = conn.cursor()
+    c.execute('INSERT INTO group_chat_messages (user, message) VALUES (?, ?)', (user, message))
+    conn.commit()
+    conn.close()
+
+# Función para obtener todos los mensajes del chat grupal
+def get_group_chat_messages():
+    conn = sqlite3.connect(os.path.join(DB_FOLDER, 'chat.db'))
+    c = conn.cursor()
+    c.execute('SELECT user, message, timestamp FROM group_chat_messages ORDER BY timestamp ASC')
+    messages = c.fetchall()
+    conn.close()
+    return messages
+
+st.title("Chat Grupal de Estudiantes")
+
+# Formulario para enviar mensajes al chat grupal
+group_user = st.text_input("Usuario", key="group_user")
+group_message = st.text_area("Mensaje", key="group_message")
+group_send_button = st.button("Enviar al Chat Grupal")
+
+if group_send_button and group_user and group_message:
+    add_group_chat_message(group_user, group_message)
+    st.success("Mensaje enviado al chat grupal")
+
+# Mostrar los mensajes del chat grupal
+st.header("Mensajes del Chat Grupal")
+group_messages = get_group_chat_messages()
+for msg in group_messages:
+    st.write(f"{msg[2]} - **{msg[0]}**: {msg[1]}")

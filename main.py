@@ -113,6 +113,24 @@ for photo in uploaded_photos:
             distance = "No especificada"
         st.image(photo_path, caption=f"{photo} - Distancia a la UNSAM: {distance} km")
 
+# Función para eliminar una foto y su archivo de distancia
+def delete_photo(photo):
+    photo_path = os.path.join(UPLOAD_FOLDER, photo)
+    distance_path = os.path.join(UPLOAD_FOLDER, f"{photo}.txt")
+    if os.path.exists(photo_path):
+        os.remove(photo_path)
+    if os.path.exists(distance_path):
+        os.remove(distance_path)
+
+# Mostrar las fotos subidas con un botón de eliminación
+st.header("Eliminar Fotos Subidas")
+for photo in uploaded_photos:
+    if photo.endswith((".jpg", ".jpeg", ".png")):
+        if st.button(f"Eliminar {photo}"):
+            delete_photo(photo)
+            st.success(f"Foto {photo} eliminada exitosamente.")
+            st.experimental_rerun()  # Recargar la página para actualizar la lista de fotos
+
 # Simular precios para las fotos subidas (en un caso real, estos precios vendrían de una base de datos)
 photo_prices = {photo: (i + 1) * 100 for i, photo in enumerate(os.listdir(UPLOAD_FOLDER))}
 
@@ -195,7 +213,7 @@ print(messages.head())
 
 # Cerrar la conexión a la base de datos
 conn.close()
-# Contar el número de usuarios registrados
+# Contar el n��mero de usuarios registrados
 num_users = user_data['username'].nunique()
 print(f'Número de usuarios registrados: {num_users}')
 

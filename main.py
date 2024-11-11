@@ -1,8 +1,8 @@
 import os
 import sqlite3
-
-import pandas as pd
 import streamlit as st
+import pandas as pd
+from PIL import Image, UnidentifiedImageError
 
 # Crear una carpeta para guardar las fotos subidas
 UPLOAD_FOLDER = 'uploads'
@@ -17,10 +17,7 @@ def load_user_data():
     if os.path.exists(USER_DATA_FILE):
         return pd.read_csv(USER_DATA_FILE)
     else:
-        # Crear un DataFrame vacío con las columnas necesarias
-        user_data = pd.DataFrame(columns=['username', 'password', 'user_type'])
-        user_data.to_csv(USER_DATA_FILE, index=False)  # Guardar el DataFrame vacío en el archivo
-        return user_data
+        return pd.DataFrame(columns=['username', 'password', 'user_type'])
 
 # Función para guardar datos de usuarios
 def save_user_data(user_data):
@@ -86,13 +83,21 @@ distance = st.number_input("Distancia a la UNSAM (en km)", min_value=0.0, step=0
 
 if uploaded_files:
     for uploaded_file in uploaded_files:
-        # Guardar las fotos en la carpeta de uploads
-        with open(os.path.join(UPLOAD_FOLDER, uploaded_file.name), "wb") as f:
-            f.write(uploaded_file.getbuffer())
-        # Guardar la distancia en un archivo de texto
-        with open(os.path.join(UPLOAD_FOLDER, f"{uploaded_file.name}.txt"), "w") as f:
-            f.write(str(distance))
-        st.success(f"Archivo {uploaded_file.name} subido exitosamente con distancia {distance} km")
+        try:
+            # Intentar abrir la imagen para verificar que es válida
+            img = Image.open(uploaded_file)
+            img.verify()
+            # Guardar las fotos en la carpeta de uploads
+            with open(os.path.join(UPLOAD_FOLDER, uploaded_file.name), "wb") as f:
+                f.write(uploaded_file.getbuffer())
+            # Guardar la distancia en un archivo de texto
+            with open(os.path.join(UPLOAD_FOLDER, f"{uploaded_file.name}.txt"), "w") as f:
+                f.write(str(distance))
+            st.success(f"Archivo {uploaded_file.name} subido exitosamente con distancia {distance} km")
+        except UnidentifiedImageError:
+            st.error(f"El archivo {uploaded_file.name} no es una imagen válida.")
+        except Exception as e:
+            st.error(f"Error al subir el archivo {uploaded_file.name}: {e}")
 
 # Mostrar las fotos subidas con la distancia
 st.header("Fotos Subidas")
